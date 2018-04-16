@@ -99,8 +99,8 @@ df <- mutate(df, score_factor = factor(score_text != "Low", labels = c("LowScore
 df$score_factor
 
 
-install.packages('ggfortify')
-install.packages('rlang')
+#install.packages('ggfortify')
+#install.packages('rlang')
 
 library(survival)
 library(ggfortify)
@@ -128,6 +128,13 @@ f <- Surv(start, end, event, type="counting") ~ score_factor
 model <- coxph(f, data=data)
 summary(model)
 
+
+
+
+
+#########################################
+
+data(tongue)
 
 
 
