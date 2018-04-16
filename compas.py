@@ -8,7 +8,7 @@ Created on Thu Apr  5 13:21:49 2018
 import os
 import pandas as pd
 
-os.chdir('C:\\Users\\TapperR\\Desktop\\compas\\compas-analysis')
+os.chdir('C:\\Users\\Robin\\Desktop\\compas-analysis')
 
 raw = pd.read_table('compas-scores-raw.csv', sep=',', encoding='utf-8',  na_filter = True)
 raw1 = pd.read_table('compas-scores.csv', sep=',', encoding='utf-8',  na_filter = True)
@@ -109,7 +109,7 @@ print("Native American defendants: %.2f%%" %  (11   / 6172 * 100))
 
 #how is the distribution of the score look like
 df['score_text'].value_counts()
-
+df['c_charge_desc'].value_counts()
 
 #contingency table creation for the factors gender and race
 pd.crosstab(index = df['sex'], columns = df['race'])
@@ -365,7 +365,7 @@ np.exp(3.1459) / (1 - control + (control * np.exp(3.1459)))
 df3 = raw4
 df3 = df3[df3['score_text'].isnull()==False]
 df3 = df3[df3['end']>df3['start']]
-
+len(df3)
 
 df3['race_factor'] = df3['race'].astype('category')
 df3['race_factor'] = df3['race_factor'].cat.reorder_categories(['Caucasian', 'African-American', 'Asian', 'Hispanic', 'Native American', 'Other'])
@@ -376,15 +376,16 @@ df3['score_factor'] = df3['score_factor'].cat.reorder_categories(['Low', 'High',
 
 
 
-df3.reset_index(inplace=True, drop = True)
-df3.drop_duplicates(subset = 'id', inplace = True)
+#df3.reset_index(inplace=True, drop = True)
+#df3.drop_duplicates(subset = 'id', inplace = True)
+#df3.reset_index(inplace=True, drop = True)
 
 
 df3['score_factor']
 df3['race_factor'].value_counts()
 
  
-from lifelines.datasets import load_rossi
+#from lifelines.datasets import load_rossi
 from lifelines import CoxPHFitter
 from lifelines.estimation import KaplanMeierFitter
 
@@ -394,36 +395,157 @@ cph = CoxPHFitter()
 df3['duration'] = df3['end'] - df3['start']
 
 #cph.fit(df3[['duration', 'event']], duration_col = df3['duration'], event_col = df3['event'])
-cph.fit(df3, duration_col = df3['duration'], event_col = df3['event'])
+#cph.fit(df3, duration_col = df3['duration'], event_col = df3['event'])
+#
+#
+#cph.fit()
+#
+#
+#kmf = KaplanMeierFitter()
+#
+#
+#kmf.fit(df3['duration'], event_observed = df3['event'])
+#
+#kmf.survival_function_
+#kmf.median_
+#kmf.plot()
+#
+#
+#from lifelines.datasets import load_rossi
+#
+#rossi_dataset = load_rossi()
+#cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+#
+#cph.print_summary()
+#
+#
+#
+##### trying some plotly
+#
+#%load_ext rpy2.ipython
+#%R install.packages("devtools")
+#%R devtools::install_github("ropensci/plotly")
+#%R install.packages("OIsurv")
+#
+#
+#import numpy as np
+#import pandas as pd
+#import lifelines as ll
+#
+#
+#from IPython.display import HTML
+#%matplotlib inline
+#import matplotlib.pyplot as plt
+#import plotly.plotly as py
+#import plotly.tools as tls   
+#from plotly.graph_objs import *
+#
+#from pylab import rcParams
+#rcParams['figure.figsize']=10, 5
+#
+#
+#
+#tongue = pd.read_table('tongue.csv', sep=',', encoding='utf-8',  na_filter = True)
+#tongue.head()
+#
+#print(tongue['time'].mean())
 
 
-cph.fit()
 
 
-kmf = KaplanMeierFitter()
 
 
-kmf.fit(df3['duration'], event_observed = df3['event'])
+######## THIS IS TO SOLVE ########
+f <- Surv(start, end, event, type="counting") ~ score_factor
+model <- coxph(f, data=data)
+summary(model)
 
-kmf.survival_function_
-kmf.median_
-kmf.plot()
+df3['start'], df3['end'], df3['event'], df3['score_factor']
+
+##################################
 
 
-from lifelines.datasets import load_rossi
+#from lifelines.estimation import KaplanMeierFitter
+#kmf = KaplanMeierFitter()
 
-rossi_dataset = load_rossi()
-cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
+#f = tongue.type == 1
+#T = tongue[f]['time']
+#C = tongue[f]['delta']
+#
+#kmf.fit(T, event_observed=C)
+#kmf.plot(title='Tumor DNA Profile 1')
+
+
+
+#df3['duration'] = df3['end'] - df3['start']
+
+
+#kmf.fit(df3['duration'], event_observed = df3['event'])
+#kmf.plot()
+#
+#
+#
+#
+#cph = CoxPHFitter()
+##cph.fit(df3[['duration', 'event']], duration_col = df3['duration'], event_col = df3['event'])
+#cph.fit(df = df3[['duration', 'event', 'High', 'Medium']], duration_col = 'duration', event_col = 'event')
+#cph.print_summary()
+#
+
+
+
+
+#from lifelines.datasets import load_regression_dataset
+#regression_dataset = load_regression_dataset()
+#
+#regression_dataset.head()
+#
+#cph.fit(regression_dataset, 'T', event_col='E')
+
+
+#creating dummies for the score factor for the survival analysis
+dummies0 = pd.get_dummies(df3['score_factor'])
+df3 = pd.concat([df3, dummies0], axis=1)
+df3 = df3.drop(['score_factor', 'Low'], axis=1)
+
+
+
+cph = CoxPHFitter()
+cph.fit(df = df3[['duration', 'event', 'High', 'Medium']], duration_col = 'duration', event_col = 'event')
 cph.print_summary()
+cph.plot()
+
+cph.fit(df = df3[['duration', 'event', 'High', 'Medium']], duration_col = 'duration', event_col = 'event')
+cph.predict_survival_function()
+
+
+df4 = df3[['duration', 'event', 'decile_score']]
+
+cph.fit(df = df4, duration_col = 'duration', event_col = 'event')
+cph.print_summary()
+#cph.plot()
+cph.predict_survival_function(X = df4)
 
 
 
-#### trying some plotly
-%load_ext rpy2.ipython
-%R install.packages("devtools")
-%R devtools::install_github("ropensci/plotly")
-%R install.packages("OIsurv")
+
+#Compare less cases to compute the concordance, maybe the first 20, like it is described in 
+#http://dni-institute.in/blogs/model-performance-assessment-statistics-concordance-steps-to-calculate/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
