@@ -455,12 +455,12 @@ df3['duration'] = df3['end'] - df3['start']
 
 
 
-######## THIS IS TO SOLVE ########
-f <- Surv(start, end, event, type="counting") ~ score_factor
-model <- coxph(f, data=data)
-summary(model)
-
-df3['start'], df3['end'], df3['event'], df3['score_factor']
+######### THIS IS TO SOLVE ########
+#f <- Surv(start, end, event, type="counting") ~ score_factor
+#model <- coxph(f, data=data)
+#summary(model)
+#
+#df3['start'], df3['end'], df3['event'], df3['score_factor']
 
 ##################################
 
@@ -550,98 +550,132 @@ cph.predict_survival_function(X = df4)
 
 
 
+from truth_tables import PeekyReader, Person, table, is_race, count, vtable, hightable, vhightable
+from csv import DictReader
+
+people = []
+with open("cox-parsed.csv") as f:
+    reader = PeekyReader(DictReader(f))
+    try:
+        while True:
+            p = Person(reader)
+            if p.valid:
+                people.append(p)
+    except StopIteration:
+        pass
 
 
-#############################         from the original script with cell magic for R  #################################
-%load_ext rpy2.ipython
-import warnings
-warnings.filterwarnings('ignore')
+#lifetime = start - end, start = out_custody - in_custody ||| end = r_offense_date - in_custody
 
 
-%%R
-library(dplyr)
-library(ggplot2)
-setwd("C:/Users/TapperR/Desktop/compas/compas-analysis")
-raw_data <- read.csv("compas-scores-two-years.csv")
-
-%R nrow(raw_data)
+pop = list(filter(lambda i: ((i.recidivist == True and i.lifetime <= 730) or
+                              i.lifetime > 730), list(filter(lambda x: x.score_valid, people))))
 
 
-%%R
-df <- dplyr::select(raw_data, age, c_charge_degree, race, age_cat, score_text, sex, priors_count, 
-                    days_b_screening_arrest, decile_score, is_recid, two_year_recid, c_jail_in, c_jail_out) %>% 
-        filter(days_b_screening_arrest <= 30) %>%
-        filter(days_b_screening_arrest >= -30) %>%
-        filter(is_recid != -1) %>%
-        filter(c_charge_degree != "O") %>%
-        filter(score_text != 'N/A')
-nrow(df)
+recid = list(filter(lambda i: i.recidivist == True and i.lifetime <= 730, pop))
+#non_recid = list(filter(lambda i: i.lifetime > 730, pop))
 
-%R nrow(df)
+rset = set(recid)
+#len(rset)
 
 
-%%R
-%R df$length_of_stay <- as.numeric(as.Date(df$c_jail_out) - as.Date(df$c_jail_in))
-%R df$length_of_stay[1:10]
-%R cor(df$length_of_stay, df$decile_score)
-%R print(df$length_of_stay)
+surv = [i for i in pop if i not in rset]
 
 
-%%R
-%R summary(df$age_cat)
-
-
-%%R
-%R summary(df$race)
-
-
-%%R
-%R summary(df$score_text)
+print("All defendants")
+table(list(recid), list(surv))
 
 
 
-%%R  #contingency table creation
-%R xtabs(~ sex + race, data=df)
 
 
-%%R
-%R summary(df$sex)
+import statistics
+print("Average followup time %.2f (sd %.2f)" % (statistics.mean(map(lambda i: i.lifetime, pop)),
+                                                statistics.stdev(map(lambda i: i.lifetime, pop))))
+print("Median followup time %i" % (statistics.median(map(lambda i: i.lifetime, pop))))
 
 
-%%R
-%R nrow(filter(df, two_year_recid == 1))
-
-%%R
-%R nrow(filter(df, two_year_recid == 1)) / nrow(df) * 100
 
 
-%%R -w 900 -h 363 -u px
-#install.packages("grid")
-#install.packages("gridExtra")
-library(grid)
-library(gridExtra)
-library(ggplot2)
-pblack <- ggplot(data=filter(df, race =="African-American"), aes(ordered(decile_score))) + 
-          geom_bar() + xlab("Decile Score") +
-          ylim(0, 650) + ggtitle("Black Defendant's Decile Scores")
-pwhite <- ggplot(data=filter(df, race =="Caucasian"), aes(ordered(decile_score))) + 
-          geom_bar() + xlab("Decile Score") +
-          ylim(0, 650) + ggtitle("White Defendant's Decile Scores")
-grid.arrange(pblack, pwhite,  ncol = 2)
 
 
-%%R
-df <- mutate(df, crime_factor = factor(c_charge_degree)) %>%
-      mutate(age_factor = as.factor(age_cat)) %>%
-      within(age_factor <- relevel(age_factor, ref = 1)) %>%
-      mutate(race_factor = factor(race)) %>%
-      within(race_factor <- relevel(race_factor, ref = 3)) %>%
-      mutate(gender_factor = factor(sex, labels= c("Female","Male"))) %>%
-      within(gender_factor <- relevel(gender_factor, ref = 2)) %>%
-      mutate(score_factor = factor(score_text != "Low", labels = c("LowScore","HighScore")))
-model <- glm(score_factor ~ gender_factor + age_factor + race_factor +
-                            priors_count + crime_factor + two_year_recid, family="binomial", data=df)
-%R summary(model)
+
+print("Black defendants")
+is_afam = is_race("African-American")
+table(list(filter(is_afam, recid)), list(filter(is_afam, surv)))
+
+
+
+print("White defendants")
+is_white = is_race("Caucasian")
+table(list(filter(is_white, recid)), list(filter(is_white, surv)))
+
+
+
+
+
+
+
+
+hightable(list(filter(is_white, recid)), list(filter(is_white, surv)))
+hightable(list(filter(is_afam, recid)), list(filter(is_afam, surv)))
+
+
+
+
+
+
+
+
+
+
+########   violent crime   #######
+
+
+from truth_tables import PeekyReader, Person, table, is_race, count, vtable, hightable, vhightable
+from csv import DictReader
+
+
+
+vpeople = []
+with open("cox-violent-parsed.csv") as f:
+    reader = PeekyReader(DictReader(f))
+    try:
+        while True:
+            p = Person(reader)
+            if p.valid:
+                vpeople.append(p)
+    except StopIteration:
+        pass
+
+vpop = list(filter(lambda i: ((i.violent_recidivist == True and i.lifetime <= 730) or
+                              i.lifetime > 730), list(filter(lambda x: x.vscore_valid, vpeople))))
+vrecid = list(filter(lambda i: i.violent_recidivist == True and i.lifetime <= 730, vpeople))
+vrset = set(vrecid)
+vsurv = [i for i in vpop if i not in vrset]
+
+
+print("All defendants")
+vtable(list(vrecid), list(vsurv))
+
+
+
+
+print("Black defendants")
+is_afam = is_race("African-American")
+vtable(list(filter(is_afam, vrecid)), list(filter(is_afam, vsurv)))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

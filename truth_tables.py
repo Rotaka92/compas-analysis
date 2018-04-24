@@ -57,6 +57,7 @@ class Person:
     @property
     def low(self):
         return self.__rows[0]['score_text'] == "Low"
+    #recid[0].__rows[0]
 
     @property
     def high(self):
@@ -134,6 +135,8 @@ def t(tn, fp, fn, tp):
     print("Total: %.2f" % (surv + recid))
     print("False positive rate: %.2f" % (fp / surv * 100))
     print("False negative rate: %.2f" % (fn / recid * 100))
+    #false negative rate is higher, which is not good -> should it be more weighted in ml-models?
+    
     spec = tn / (tn + fp)
     sens = tp / (tp + fn)
     ppv = tp / (tp + fp)
@@ -149,9 +152,12 @@ def t(tn, fp, fn, tp):
 
 
 def table(recid, surv, prefix=''):
+    #recid = list(recid), surv = list(surv)
     tn = count(lambda i: getattr(i, prefix + 'low'), surv)
     fp = count(lambda i: getattr(i, prefix + 'high'), surv)
     fn = count(lambda i: getattr(i, prefix + 'low'), recid)
+    #fn = count(lambda i: getattr(recid[0].recidivist, prefix + 'low'), recid)
+    #count('True')
     tp = count(lambda i: getattr(i, prefix + 'high'), recid)
     t(tn, fp, fn, tp)
 
