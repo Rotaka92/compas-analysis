@@ -8,7 +8,8 @@ Created on Thu Apr  5 13:21:49 2018
 import os
 import pandas as pd
 
-os.chdir('C:\\Users\\Robin\\Desktop\\compas-analysis')
+#os.chdir('C:\\Users\\Robin\\Desktop\\compas-analysis')
+os.chdir('C:\\Users\\TapperR\\Desktop\\compas\\compas-analysis')
 
 raw = pd.read_table('compas-scores-raw.csv', sep=',', encoding='utf-8',  na_filter = True)
 raw1 = pd.read_table('compas-scores.csv', sep=',', encoding='utf-8',  na_filter = True)
@@ -456,11 +457,11 @@ df3['duration'] = df3['end'] - df3['start']
 
 
 ######## THIS IS TO SOLVE ########
-f <- Surv(start, end, event, type="counting") ~ score_factor
-model <- coxph(f, data=data)
-summary(model)
-
-df3['start'], df3['end'], df3['event'], df3['score_factor']
+#f <- Surv(start, end, event, type="counting") ~ score_factor
+#model <- coxph(f, data=data)
+#summary(model)
+#
+#df3['start'], df3['end'], df3['event'], df3['score_factor']
 
 ##################################
 
@@ -507,10 +508,10 @@ df3['start'], df3['end'], df3['event'], df3['score_factor']
 #creating dummies for the score factor for the survival analysis
 dummies0 = pd.get_dummies(df3['score_factor'])
 df3 = pd.concat([df3, dummies0], axis=1)
-df3 = df3.drop(['score_factor', 'Low'], axis=1)
+#df3 = df3.drop(['score_factor', 'Low'], axis=1)
 
 
-
+##### how good is the categorization in high, medium and low
 cph = CoxPHFitter()
 cph.fit(df = df3[['duration', 'event', 'High', 'Medium']], duration_col = 'duration', event_col = 'event')
 cph.print_summary()
@@ -520,6 +521,12 @@ cph.fit(df = df3[['duration', 'event', 'High', 'Medium']], duration_col = 'durat
 cph.predict_survival_function()
 
 
+
+
+
+
+
+#how good is the numeric decile_score
 df4 = df3[['duration', 'event', 'decile_score']]
 
 cph.fit(df = df4, duration_col = 'duration', event_col = 'event')
@@ -532,6 +539,186 @@ cph.predict_survival_function(X = df4)
 
 #Compare less cases to compute the concordance, maybe the first 20, like it is described in 
 #http://dni-institute.in/blogs/model-performance-assessment-statistics-concordance-steps-to-calculate/
+
+
+dummies0 = pd.get_dummies(df3['race_factor'])
+df3 = pd.concat([df3, dummies0], axis=1)
+#df3 = df3.drop(['race_factor', 'Caucasian'], axis=1)
+
+
+
+#creating interaction terms between race and score factor first
+#from sklearn.preprocessing import PolynomialFeatures
+#poly = PolynomialFeatures(interaction_only=True,include_bias = False)
+#
+#poly.fit_transform(df3[['race_factor', 'score_factor']])
+#
+#dummie1 = PolynomialFeatures()
+
+for i in df3['race_factor'].unique():
+    if i != 'Caucasian':
+        for j in ['High', 'Medium']:
+            df3['%s_%s'%(i,j)] = df3['%s'%i]*df3['%s'%j]
+
+
+
+
+df5 = df3[['duration', 'event', 'African-American', 'Asian', 'Hispanic', 'Native American', 'Other', 'High', 'Medium', 'African-American_High', 'African-American_Medium', 'Asian_High', 'Asian_Medium', 'Hispanic_High', 'Hispanic_Medium', 'Native American_High', 'Native American_Medium', 'Other_High', 'Other_Medium']]
+
+cph.fit(df = df5, duration_col = 'duration', event_col = 'event')
+cph.print_summary()
+#cph.plot()
+
+
+
+
+
+
+
+
+import math
+print("Black High Hazard: %.2f" % (math.exp(-0.1864 + 1.1478)))
+print("White High Hazard: %.2f" % (math.exp(1.1478)))
+print("Black Medium Hazard: %.2f" % (math.exp(0.7736-0.1694)))
+print("White Medium Hazard: %.2f" % (math.exp(0.7736)))
+
+
+df5 = df3[df3['']
+df5 = df3[['duration', 'event']]
+
+cph.fit(df = df5, duration_col = 'duration', event_col = 'event')
+cph.predict_survival_function(X = df5).plot()
+
+
+
+
+#Kaplan Meier plots
+
+from lifelines.estimation import KaplanMeierFitter
+kmf = KaplanMeierFitter()
+
+
+df6 = df3[['duration', 'event']]
+kmf.fit(df6['duration'],df6['event'])
+kmf.plot()
+
+
+#how does the survival curve look alike for black people
+df6a = df3[df3['race_factor'] == 'African-American']
+df6a = df6a[df6a['score_factor'] == 'Low']
+df6b = df6a[['duration', 'event']]
+kmf.fit(df6b['duration'],df6b['event'])
+kmf.plot()
+
+
+#how does the survival curve look alike for white people
+df6c = df3[df3['race_factor'] == 'Caucasian']
+df6c = df6c[df6c['score_factor'] == 'Low']
+df6d = df6c[['duration', 'event']]
+kmf.fit(df6d['duration'],df6d['event'])
+kmf.plot()
+
+
+
+
+
+
+
+
+#how high is the difference between black and white regarding the concordance
+cph = CoxPHFitter()
+df3a = df3[df3['race_factor'] == 'African-American']
+cph.fit(df = df3a[['duration', 'event', 'High', 'Medium']], duration_col = 'duration', event_col = 'event')
+cph.print_summary()
+
+
+df3a = df3[df3['race_factor'] == 'Caucasian']
+cph.fit(df = df3a[['duration', 'event', 'High', 'Medium']], duration_col = 'duration', event_col = 'event')
+cph.print_summary()
+
+
+
+##########     Directions of the Racial Bias    #############
+
+from truth_tables import PeekyReader, Person, table, is_race, count, vtable, hightable, vhightable
+from csv import DictReader
+
+
+people = []
+
+f = open('cox-parsed.csv', 'r')
+
+with open('cox-parsed.csv') as f:
+    #print(f)
+    reader = PeekyReader(DictReader(f))
+    try:
+        while True:
+            p = Person(reader)
+            if p.valid:
+                people.append(p)
+    except StopIteration:
+        pass
+    
+    
+#len(people)
+#people[0].score_valid
+#people[0].rows
+#people[0].valid
+#people[0].__rows
+
+
+    
+pop = list(filter(lambda i: ((i.recidivist == True and i.lifetime <= 730) or
+                              i.lifetime > 730), list(filter(lambda x: x.score_valid, people))))
+
+
+
+#len(list(filter(lambda x: x.score_valid, people)))
+#len(pop)    
+
+
+recid = list(filter(lambda i: i.recidivist == True and i.lifetime <= 730, pop))
+#len(recid) 
+
+
+
+rset = set(recid)
+surv = [i for i in pop if i not in rset]
+
+
+
+print("All defendants")
+table(list(recid), list(surv))
+
+
+
+
+#### Can we beat it with a Neural Network???? ########
+
+
+import tensorflow as tf
+
+hello = tf.constant('Hello, TensorFlow!')
+
+#start a tensorflow program
+sess = tf.Session()
+sess.run(hello)
+
+a = tf.constant(10)
+b = tf.constant(32)
+
+sess.run(a + b)
+
+
+
+#end a tensorflow program
+sess.close()
+
+
+
+
+
+
 
 
 

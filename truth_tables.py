@@ -2,6 +2,18 @@ from sys import stdout
 from csv import DictReader, DictWriter
 
 
+
+
+
+
+#reader = PeekyReader(DictReader(f))
+
+#reader.peek()['id']
+#p = Person(reader)
+
+
+
+
 class PeekyReader:
     def __init__(self, reader):
         self.peeked = None
